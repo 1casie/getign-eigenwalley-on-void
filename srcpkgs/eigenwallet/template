@@ -1,9 +1,8 @@
-# Template file for 'eigenwallet'
 pkgname=eigenwallet
 version=3.2.1
 revision=1
 build_style=generic
-hostmakedepends="pkg-config cargo just nodejs yarn git tar wget"  # Added wget
+hostmakedepends="pkg-config cargo just nodejs yarn git tar wget" 
 makedepends="openssl-devel sqlite-devel libgit2-1.8-devel libwebkit2gtk41-devel gtk+3-devel
  libayatana-appindicator-devel libsoup3-devel atk-devel cairo-devel
  gdk-pixbuf-devel pango-devel cmake patch"
@@ -16,35 +15,33 @@ distfiles="https://github.com/eigenwallet/core/archive/refs/tags/${version}.tar.
 checksum="de036373724706674f33ee8b3984e7ab3f45857b43203295c301d45de6c64aca"
 
 do_build() {
-    # Install GUI dependencies
     just gui_install
 
-    # Manual Monero source setup - download directly during build
     cd monero-sys
-    
+
     echo "=== Downloading Monero source directly ==="
     wget -O monero-source.tar.gz https://github.com/monero-project/monero/archive/refs/tags/v0.18.4.3.tar.gz
     tar -xf monero-source.tar.gz
+
+    rm -rf monero
     mv monero-0.18.4.3 monero
 
-    # Apply the necessary patch manually
     if [ -f patches/eigenwallet_0001_wallet2_api_allow_subtract_from_fee.patch ]; then
-        patch -p1 < patches/eigenwallet_0001_wallet2_api_allow_subtract_from_fee.patch
+        cd monero
+        patch -p1 < ../patches/eigenwallet_0001_wallet2_api_allow_subtract_from_fee.patch
+        cd ..
     fi
 
     cd ..
-    
-    # Build the project
+
     just swap
 }
 
 do_install() {
-    # Install the main binary - you may need to adjust this path
     if [ -f target/release/eigenwallet ]; then
         vbin target/release/eigenwallet
     fi
 
-    # Install desktop file and icons if they exist
     if [ -f assets/eigenwallet.desktop ]; then
         vinstall assets/eigenwallet.desktop 644 usr/share/applications
     fi
