@@ -3,7 +3,7 @@ pkgname=eigenwallet
 version=3.2.1
 revision=1
 build_style=generic
-hostmakedepends="pkg-config cargo just nodejs yarn git tar"
+hostmakedepends="pkg-config cargo just nodejs yarn git tar wget"  # Added wget
 makedepends="openssl-devel sqlite-devel libgit2-1.8-devel libwebkit2gtk41-devel gtk+3-devel
  libayatana-appindicator-devel libsoup3-devel atk-devel cairo-devel
  gdk-pixbuf-devel pango-devel cmake patch"
@@ -12,39 +12,19 @@ short_desc="Monero wallet for atomic swaps with GUI"
 maintainer="Casie Nakamura <casie@tuta.io>"
 license="GPL-3.0-or-later"
 homepage="https://github.com/eigenwallet/core"
-distfiles="https://github.com/eigenwallet/core/archive/refs/tags/${version}.tar.gz
-           https://github.com/monero-project/monero/archive/refs/tags/v0.18.4.3.tar.gz"
-checksum="de036373724706674f33ee8b3984e7ab3f45857b43203295c301d45de6c64aca
-           fdec15d2b5c40f70aa4115aae8839ea9a247e3186c73f2d854432c7badafc939"
+distfiles="https://github.com/eigenwallet/core/archive/refs/tags/${version}.tar.gz"
+checksum="de036373724706674f33ee8b3984e7ab3f45857b43203295c301d45de6c64aca"
 
 do_build() {
     # Install GUI dependencies
     just gui_install
 
-    echo "=== ULTRA DEBUG: Finding the Monero tarball ==="
-    find "${XBPS_SRCDISTDIR}/" -name "*v0.18.4.3*" -o -name "*monero*" 2>/dev/null
-    echo "=== ULTRA DEBUG: Listing ALL of XBPS_SRCDISTDIR recursively ==="
-    find "${XBPS_SRCDISTDIR}/" -type f 2>/dev/null | head -20
-    echo "=== ULTRA DEBUG: Checking if file exists directly ==="
-    ls -la "${XBPS_SRCDISTDIR}/eigenwallet-3.2.1/v0.18.4.3.tar.gz" || echo "FILE NOT FOUND"
-
-    # Manual Monero source setup instead of git submodules
+    # Manual Monero source setup - download directly during build
     cd monero-sys
-
-    # Try multiple possible locations
-    echo "=== Trying different file locations ==="
-    if [ -f "${XBPS_SRCDISTDIR}/eigenwallet-3.2.1/v0.18.4.3.tar.gz" ]; then
-        echo "Found file at versioned directory"
-        tar -xf "${XBPS_SRCDISTDIR}/eigenwallet-3.2.1/v0.18.4.3.tar.gz"
-    elif [ -f "${XBPS_SRCDISTDIR}/v0.18.4.3.tar.gz" ]; then
-        echo "Found file at root distfiles"
-        tar -xf "${XBPS_SRCDISTDIR}/v0.18.4.3.tar.gz"
-    else
-        echo "ERROR: Could not find Monero tarball anywhere!"
-        find "${XBPS_SRCDISTDIR}/" -name "*.tar.gz" 2>/dev/null | head -10
-        exit 1
-    fi
-
+    
+    echo "=== Downloading Monero source directly ==="
+    wget -O monero-source.tar.gz https://github.com/monero-project/monero/archive/refs/tags/v0.18.4.3.tar.gz
+    tar -xf monero-source.tar.gz
     mv monero-0.18.4.3 monero
 
     # Apply the necessary patch manually
@@ -53,7 +33,7 @@ do_build() {
     fi
 
     cd ..
-
+    
     # Build the project
     just swap
 }
