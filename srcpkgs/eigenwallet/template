@@ -1,0 +1,48 @@
+# Template file for 'eigenwallet'
+pkgname=eigenwallet
+version=3.2.1
+revision=1
+build_style=generic
+hostmakedepends="pkg-config cargo just nodejs yarn git tar"  # Added tar here
+makedepends="openssl-devel sqlite-devel libgit2-1.8-devel libwebkit2gtk41-devel gtk+3-devel
+ libayatana-appindicator-devel libsoup3-devel atk-devel cairo-devel
+ gdk-pixbuf-devel pango-devel cmake patch"  # Added patch here too
+depends="libwebkit2gtk41"
+short_desc="Monero wallet for atomic swaps with GUI"
+maintainer="Casie Nakamura casie@tuta.io"
+license="GPL-3.0-or-later"
+homepage="https://github.com/eigenwallet/core"
+distfiles="https://github.com/eigenwallet/core/archive/refs/tags/${version}.tar.gz
+           https://github.com/monero-project/monero/archive/refs/tags/v0.18.4.3.tar.gz"
+checksum="fdec15d2b5c40f70aa4115aae8839ea9a247e3186c73f2d854432c7badafc939"
+
+do_build() {
+    # Install GUI dependencies
+    just gui_install
+
+    # Manual Monero source setup instead of git submodules
+    cd monero-sys
+    tar -xf ${XBPS_SRCDISTDIR}/eigenwallet-${version}/monero-0.18.4.3.tar.gz
+    mv monero-0.18.4.3 monero
+
+    # Apply the necessary patch manually
+    patch -p1 < patches/eigenwallet_0001_wallet2_api_allow_subtract_from_fee.patch
+
+    cd ..
+    
+    # Build the project
+    just swap
+}
+
+do_install() {
+    # Install the main binary - you may need to adjust this path
+    vbin target/release/eigenwallet
+
+    # Install desktop file and icons if they exist
+    if [ -f assets/eigenwallet.desktop ]; then
+        vinstall assets/eigenwallet.desktop 644 usr/share/applications
+    fi
+    if [ -f assets/icon.png ]; then
+        vinstall assets/icon.png 644 usr/share/pixmaps eigenwallet.png
+    fi
+}
